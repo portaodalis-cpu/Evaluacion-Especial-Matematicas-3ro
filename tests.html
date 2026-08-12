@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pruebas - Plataforma autoevaluable</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="config.example.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main class="test-page">
+    <section class="hero-panel">
+      <p class="eyebrow">Pruebas manuales</p>
+      <h1>Verificación de normalizadores y puntuación</h1>
+      <p>Esta página ejecuta comprobaciones internas de la plataforma. No forma parte del examen del estudiante.</p>
+      <button id="run-tests" class="primary-action">Ejecutar pruebas</button>
+    </section>
+    <section class="surface">
+      <h2>Resultados</h2>
+      <div id="test-summary" class="status-note">Pulsa el botón para iniciar.</div>
+      <ol id="test-results" class="test-results"></ol>
+    </section>
+  </main>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const button = document.getElementById("run-tests");
+      const summary = document.getElementById("test-summary");
+      const list = document.getElementById("test-results");
+      async function run() {
+        button.disabled = true;
+        summary.textContent = "Ejecutando pruebas...";
+        list.innerHTML = "";
+        const results = await window.ExamAppInternals.runSelfTests();
+        const passed = results.filter((item) => item.pass).length;
+        summary.textContent = `${passed}/${results.length} pruebas aprobadas.`;
+        results.forEach((item) => {
+          const li = document.createElement("li");
+          li.className = item.pass ? "test-pass" : "test-fail";
+          li.textContent = `${item.pass ? "OK" : "ERROR"} - ${item.name}${item.details ? ": " + item.details : ""}`;
+          list.appendChild(li);
+        });
+        button.disabled = false;
+      }
+      button.addEventListener("click", run);
+      run();
+    });
+  </script>
+</body>
+</html>
