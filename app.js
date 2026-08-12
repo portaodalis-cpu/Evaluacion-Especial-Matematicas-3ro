@@ -461,9 +461,8 @@
     if (question.prompt.includes("\\(")) prompt.classList.add("math-expression");
     wrap.append(prompt);
     if (question.type === "choice") renderChoice(wrap, question);
-    if (question.type === "number" || question.type === "relation" || question.type === "polynomial") {
-      renderSingleInput(wrap, question, question.type === "number" ? "number" : "text");
-    }
+    if (question.type === "number" || question.type === "polynomial") renderSingleInput(wrap, question, question.type === "number" ? "number" : "text");
+    if (question.type === "relation") renderRelationInput(wrap, question);
     if (question.type === "ruffini") renderRuffini(wrap, question);
     if (question.type === "venn") renderVenn(wrap, question);
     return wrap;
@@ -511,7 +510,63 @@
     });
     attachMathFocus(input);
     container.append(label, input);
+    if (question.type === "number") container.append(textBlock("small", "Escribe solo el resultado numérico. Ejemplo: 45"));
+    if (question.type === "polynomial") container.append(textBlock("small", "Puedes escribir x² o x^2; el orden de los términos no importa."));
     wrap.append(container);
+  }
+
+  function renderRelationInput(wrap, question) {
+    const saved = relationParts(state.answers[question.id], question.answer);
+    const group = el("div", "relation-answer");
+    const operatorField = el("div", "field");
+    const operatorLabel = el("label");
+    const operatorId = `${question.id}-operator`;
+    operatorLabel.htmlFor = operatorId;
+    operatorLabel.textContent = "Signo";
+    const operator = el("select");
+    operator.id = operatorId;
+    ["=", "<", "<=", ">", ">="].forEach((value) => {
+      const option = el("option");
+      option.value = value;
+      option.textContent = value === "<=" ? "≤" : value === ">=" ? "≥" : value;
+      option.selected = saved.operator === value;
+      operator.append(option);
+    });
+    operator.addEventListener("change", () => setRelationAnswer(question.id, operator.value, number.value));
+    operatorField.append(operatorLabel, operator);
+
+    const numberField = el("div", "field");
+    const numberLabel = el("label");
+    const numberId = `${question.id}-number`;
+    numberLabel.htmlFor = numberId;
+    numberLabel.textContent = "Valor de x";
+    const number = el("input");
+    number.id = numberId;
+    number.type = "number";
+    number.inputMode = "numeric";
+    number.value = saved.value;
+    number.autocomplete = "off";
+    number.addEventListener("input", () => setRelationAnswer(question.id, operator.value, number.value));
+    numberField.append(numberLabel, number);
+    group.append(operatorField, numberField);
+    wrap.append(group);
+    wrap.append(textBlock("small", "En teléfono: selecciona el signo y escribe solo el número. También se aceptan respuestas como x=3, x<3 o menor que 3."));
+  }
+
+  function setRelationAnswer(questionId, operator, value) {
+    state.answers[questionId] = { operator, value };
+    saveDraft();
+  }
+
+  function relationParts(answer, expected) {
+    const fallbackOperator = expected.kind === "eq" ? "=" : expected.kind === "lt" ? "<" : expected.kind === "le" ? "<=" : expected.kind === "gt" ? ">" : ">=";
+    if (answer && typeof answer === "object") {
+      return { operator: answer.operator || fallbackOperator, value: answer.value || "" };
+    }
+    const text = normalizeCommon(String(answer || "")).replace(/menor\s+o\s+igual\s+que/g, "<=").replace(/menor\s+igual\s+que/g, "<=").replace(/menor\s+que/g, "<").replace(/\s+/g, "");
+    const match = text.match(/^x?(<=|<|>=|>|=)?([+-]?\d+(?:\.\d+)?)$/);
+    if (!match) return { operator: fallbackOperator, value: "" };
+    return { operator: match[1] || fallbackOperator, value: match[2] || "" };
   }
 
   function renderRuffini(wrap, question) {
@@ -870,10 +925,11 @@
     }
     if (question.type === "relation") {
       const correct = compareRelation(answer, question.answer);
+      const parts = relationParts(answer, question.answer);
       return {
         score: correct ? question.points : 0,
-        given: String(answer || "").trim(),
-        unanswered: !String(answer || "").trim()
+        given: parts.value ? `x ${parts.operator === "<=" ? "≤" : parts.operator === ">=" ? "≥" : parts.operator} ${parts.value}` : String(answer || "").trim(),
+        unanswered: !parts.value
       };
     }
     if (question.type === "polynomial") {
@@ -926,6 +982,11 @@
   }
 
   function compareRelation(value, expected) {
+    if (value && typeof value === "object") {
+      const parts = relationParts(value, expected);
+      if (!parts.value) return false;
+      return compareRelation(`x${parts.operator}${parts.value}`, expected);
+    }
     const raw = String(value == null ? "" : value).trim();
     if (!raw) return false;
     let text = normalizeCommon(raw)
@@ -1028,6 +1089,7 @@
   function isAnswered(question, answer) {
     if (question.type === "ruffini") return Boolean(answer && String(answer.quotient || "").trim() && String(answer.remainder || "").trim());
     if (question.type === "venn") return Boolean(answer && question.fields.every((fieldInfo) => String(answer[fieldInfo.key] || "").trim()));
+    if (question.type === "relation") return Boolean(relationParts(answer, question.answer).value);
     return Boolean(String(answer || "").trim());
   }
 

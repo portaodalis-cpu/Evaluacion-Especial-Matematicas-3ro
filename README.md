@@ -54,6 +54,10 @@ Si `FORMSPREE_ENDPOINT` queda vacío, la plataforma corrige el examen, muestra r
 
 La plataforma usa rutas relativas, por lo que también funciona si el repositorio se publica como subruta.
 
+## Cómo responden los estudiantes
+
+En evaluación de polinomios se escribe solo el número final, por ejemplo `45`. En ecuaciones e inecuaciones la plataforma muestra un selector de signo y un campo numérico: para `x = 3` se elige `=` y se escribe `3`; para `x < 3` se elige `<` y se escribe `3`. En Ruffini y operaciones con polinomios sí se permite escribir expresiones como `x² - 2x - 3` o `x^2 - 2x - 3`.
+
 ## Cambiar puntuación o nota mínima
 
 En `app.js`:

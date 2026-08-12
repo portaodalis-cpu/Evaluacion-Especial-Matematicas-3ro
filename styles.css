@@ -481,6 +481,24 @@ textarea {
   gap: 12px;
 }
 
+.relation-answer {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.42fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.relation-answer select,
+.relation-answer input {
+  min-height: 52px;
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.relation-answer select {
+  text-align: center;
+}
+
 .ruffini-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(38px, 1fr));
